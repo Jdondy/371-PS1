@@ -1,0 +1,159 @@
+---
+title: "PS1"
+output: html_document
+---
+
+# Problem Set 1: Estimating causal effect with BA and CS methods
+
+## 1. Graphical Exploration
+### 1.
+```{r}
+library(tidyverse)
+progresa <- read.csv("progresa-sample.csv.bz2")
+cases <- nrow(progresa)
+bruh <- unique(progresa$village)
+vil_uniq <- length(bruh)
+poor1 <- progresa%>%
+  filter(poor == 'pobre' & progresa == 'basal')
+poor1 <- table(poor1$poor)
+poor1 <- as.data.frame(poor1)
+poor2 <- poor1[1,2]
+```
+There are `r cases`, across `r vil_uniq` different villages. There are `r poor2` cases of poor in progresa villages.
+
+### 2.
+```{r}
+newprog <- na.omit(progresa[which(progresa$year==97 | progresa$year==98),])
+newprog1 <- newprog%>%
+  group_by(village)%>%
+  filter(poor == 'pobre' & progresa == 'basal')%>%
+  summarise(mean(sc))
+newprog2 <- newprog%>%
+  group_by(village)%>%
+  filter(poor == 'pobre' & progresa == 0)%>%
+  summarise(mean(sc))
+avg1 <- mean(newprog1$`mean(sc)`)
+avg2 <- mean(newprog2$`mean(sc)`)
+```
+The average schooling rate by village is `r avg1` for progresa villages and `r avg2` for non-progresa villages, all in poor (pobre) households.
+
+### 3.
+```{r}
+borgprog <- na.omit(progresa[which(progresa$year==97),])
+school97 <- borgprog%>%
+  group_by(village)%>%
+  mutate(schooling = mean(sc))
+ggplot(school97, aes(schooling, fill=progresa, color=progresa))+
+  geom_density(alpha=0.2)
+```
+
+### 4.
+```{r}
+borgprog <- na.omit(progresa[which(progresa$year==98),])
+school97 <- borgprog%>%
+  group_by(village)%>%
+  mutate(schooling = mean(sc))
+ggplot(school97, aes(schooling, fill=progresa, color=progresa))+
+  geom_density(alpha=0.2)
+```
+
+### 5.
+The distributions do not look similar, as the graph after the project is skewed left vs a more normal graph in '97. I see that the higher schooling rates are more dense within the progresa villages rather than the control villages.
+
+## 2.1 Measuring Impact
+
+### 1.
+We assume that the error term is unrelated to 0 vs basal values, which means that there is negligible original difference in schooling between progresa and non-progresa villages. I think that this was fulfillled for the most part.
+
+### 2.
+We only look at poor households because only poor households qualify for money, and we look at 1998 because this tells us the change or difference after the treatment was completed.
+
+### 3.
+```{r}
+borgprog %>%
+  group_by(progresa)%>%
+  filter(poor=='pobre')%>%
+  summarize(mean(sc))
+```
+Difference is about 3.8 percentage points
+
+### 4.
+Yes, we can assume that progresa was effective, although it wasn't much, it still increased the mean schooling by 3.8 percentage points.
+
+### 5.
+```{r}
+borgprog <- borgprog%>%
+  filter(poor=='pobre')
+lm(sc~progresa, data=borgprog)%>%
+  summary()
+```
+
+### 6. 
+Yes the results are the same.
+
+### 7.
+The p value is 2.2e-16, so the results are statistcally significant.
+
+### 8.
+```{r}
+borgprog <- borgprog%>%
+  filter(poor=='pobre')
+lm(sc~progresa + fam_n + dist_sec + hohedu + hohwag, data=borgprog)%>%
+  summary()
+```
+
+### 9. 
+Yes the covariates substantially change the results, most nearly the same or more than the treatment.
+
+## 2.2
+
+### 1.
+The assumption in this case is that there was no significant change or implementation to society that might greatly impact average schooling rates between the years 1997-98. Yes, I do believe that these assumptions were fulfilled. 
+
+### 2.
+We are selecting only progresa villages and only poor villages because those are the groups that were able to recieve the treatment, and we are comparing how effective the treatment was by looking at treatment groups before and after certain years.
+
+### 3.
+```{r}
+borgprog <- na.omit(progresa[which(progresa$year==98 | progresa$year == 97),])
+borgprog %>%
+  group_by(year)%>%
+  filter(poor=='pobre' & progresa=='basal')%>%
+  summarize(mean(sc))
+```
+
+### 4.
+Yes, we can claim that progresa was effective using the before-after method because there was a slight increase in avg schooling rates (about 2.6 percentage points).
+
+### 5.
+```{r}
+borgprog <- borgprog%>%
+  mutate(after = (year <= 97) + 0)
+borgprog <- borgprog%>%
+  filter(poor=='pobre' & progresa=='basal')
+lm(sc~after, data=borgprog)%>%
+  summary()
+```
+
+### 6. 
+Yes, we do get the same results as jsut when comparing the means.
+
+### 7.
+The effect is statistically significant, as the p-value is 1.98e-11.
+
+### 8.
+```{r}
+borgprog <- borgprog%>%
+  filter(poor=='pobre' & progresa=='basal')
+lm(sc~after + fam_n + dist_sec + hohedu + hohwag, data=borgprog)%>%
+  summary()
+```
+
+### 9. 
+Other covariates definitely change the results, many even more than the year (before/after trial).
+
+### 10.
+I find the assumption that there was no significant change that would impact the average schooling rate between the years 1997-98 to be more convincing because there are a lot of different components that play into error.
+
+### I spent about 6 hours on this PS.
+
